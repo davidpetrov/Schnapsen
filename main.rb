@@ -61,6 +61,10 @@ class Deck
   def shuffle
     @deck.shuffle!
   end
+
+  def empty?
+    @deck.empty?
+  end
 end
 
 class Set
@@ -98,26 +102,53 @@ class Set
     if @turn.zero?
       puts self
       get_player_move
+      @player.points += @player.check_for_pair(@player_move, @trump)
       puts self
       get_computer_move
       score_update
       turn_update
-      if state == :open
+      if @state == :open and !@full_deck.empty?
         @player.draw_card(@full_deck.remove())
         @computer.draw_card(@full_deck.remove())
       end
       puts self
     else
       get_computer_move
+      p @computer.check_for_pair(@computer_move, @trump)
+      @computer.points += @computer.check_for_pair(@computer_move, @trump)
       puts self
       get_player_move
       score_update
       turn_update
-      if state == :open
+      if @state == :open and !@full_deck.empty?
         @computer.draw_card(@full_deck.remove())
         @player.draw_card(@full_deck.remove())
       end
       puts self
+    end
+  end
+
+  def moves(state)
+    1.upto(12) do |round|
+      move
+      if @computer.points >= 66
+        puts "Computer wins\n"
+        break
+      elsif @player.points >= 66
+        puts "Player wins\n"
+        break
+      elsif round == 12
+        if evaluate_move_winner(@turn) == 1
+          @player.points += 11
+          puts "Player wins\n"
+        else
+          @computer.points += 11
+          puts "Player wins\n"
+        end
+      else
+        @player_move = nil
+        @computer_move = nil
+      end
     end
   end
 
@@ -210,9 +241,13 @@ class Player
     @hand.add(card)
   end
 
-  def check_for_pair(move)
-    if move.value == :Q
-      @hand.include?(Card.new(move.suit,:K))
+  def check_for_pair(move, trump)
+    pairs = {:Q => :K, :K => :Q}
+    pair_card = Card.new(move.suit, pairs[move.value])
+    if pairs.keys.include?(move.value) and @hand.include?(pair_card)
+      move.suit == trump.suit ? 40 : 20
+    else
+      0
     end
   end
 end
@@ -228,8 +263,14 @@ class Computer
     @hand.add(card)
   end
 
-  def check_for_pair
-    queens = @hand.select { |card| card}
+  def check_for_pair(move, trump)
+    pairs = {:Q => :K, :K => :Q}
+    pair_card = Card.new(move.suit, pairs[move.value])
+    if pairs.keys.include?(move.value) and @hand.include?(pair_card)
+      move.suit == trump.suit ? 40 : 20
+    else
+      0
+    end
   end
 
   def evaluate_hand(trump, state, on_move, player_move = nil)
@@ -240,13 +281,13 @@ class Computer
         possible_take_moves = @hand.select do |card|
           card.suit == player_move.suit and card > player_move
         end
-          if possible_take_moves.empty?
-            possible_give_moves = @hand.select do |card|
-              card.suit != trump.suit
-            end.min_by{ |card| VALUES[card.value] }
-          else
-            possible_take_moves.max
-          end
+        if possible_take_moves.empty?
+          possible_give_moves = @hand.select do |card|
+            card.suit != trump.suit
+          end.min_by{ |card| VALUES[card.value] }
+        else
+          possible_take_moves.max
+        end
       end
     else
       if on_move == 1
@@ -306,5 +347,5 @@ end
 
 set = Set.new
 set.draw
-set.move
+set.moves(:open)
 # p Deck.new([]).methods
