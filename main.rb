@@ -114,7 +114,6 @@ class Set
       puts self
     else
       get_computer_move
-      p @computer.check_for_pair(@computer_move, @trump)
       @computer.points += @computer.check_for_pair(@computer_move, @trump)
       puts self
       get_player_move
@@ -153,34 +152,16 @@ class Set
   end
 
 
-  def evaluate_move_winner(turn)#1 if player win 0 else / refactor
-    if turn.zero?
-      if @player_move.suit == @computer_move.suit
-        @player_move <=> @computer_move
-      elsif @player_move.suit != @computer_move.suit and @computer_move.suit == @trump.suit
-        -1
-      else
-        1
-      end
+  def evaluate_move_winner(turn)#1 if player win 0 else
+    if @computer_move.suit == @player_move.suit
+      @player_move <=> @computer_move
     else
-      if @player_move.suit == @computer_move.suit
-        @player_move <=> @computer_move
-      elsif @player_move.suit != @computer_move.suit and @player_move.suit == @trump.suit
-        1
+      if @trump.suit == @computer_move.suit or @trump.suit == @player_move.suit
+        @trump.suit == @player_move.suit ? 1 : -1
       else
-        -1
+        turn.zero? ? 1 : -1
       end
-    end
-
-    # if @computer_move.suit == @trump.suit
-    #   @computer_move <=> @player_move
-    # else
-    #   if @trump.suit == @computer_move.suit or @trump.suit == @player_move.suit
-    #     @trump.suit == @player_move.suit ? 1 : -1
-    #   else
-    #     turn.zero? ? 1 : -1
-    #   end
-    # end    
+    end    
   end
 
   def score_update
