@@ -98,11 +98,28 @@ class Set
     @computer = Computer.new(computer_cards)
   end
 
-  def move()
+  def exchange_nine_of_trumps(player)
+    nine_of_trumps = Card.new(@trump.suit, 9)
+    @full_deck.remove(@trump)
+    player.hand.add(@trump)
+    player.hand.remove(nine_of_trumps)
+    @full_deck.add(nine_of_trumps)
+    @trump = nine_of_trumps
+  end
+
+  def move(round)
     if @turn.zero?
       puts self
+      if @player.check_for_nine_of_trumps(@trump)
+        puts "Do you want to exchange 9 of trups? [y, n]\n"
+        answer = gets
+        if answer.to_s.match(/y/)
+          exchange_nine_of_trumps(@player)
+          puts self
+        end
+      end
       get_player_move
-      @player.points += @player.check_for_pair(@player_move, @trump)
+      @player.points += @player.pair_points(@player_move, @trump)
       puts self
       get_computer_move
       score_update
@@ -113,8 +130,11 @@ class Set
       end
       puts self
     else
+      if @computer.check_for_nine_of_trumps(@trump)
+        exchange_nine_of_trumps(@computer)
+      end
       get_computer_move
-      @computer.points += @computer.check_for_pair(@computer_move, @trump)
+      @computer.points += @computer.pair_points(@computer_move, @trump)
       puts self
       get_player_move
       score_update
@@ -129,7 +149,8 @@ class Set
 
   def moves(state)
     1.upto(12) do |round|
-      move
+      move(round)
+      puts "round #{round}"
       if @computer.points >= 66
         puts "Computer wins\n"
         break
@@ -222,7 +243,7 @@ class Player
     @hand.add(card)
   end
 
-  def check_for_pair(move, trump)
+  def pair_points(move, trump)
     pairs = {:Q => :K, :K => :Q}
     pair_card = Card.new(move.suit, pairs[move.value])
     if pairs.keys.include?(move.value) and @hand.include?(pair_card)
@@ -230,6 +251,10 @@ class Player
     else
       0
     end
+  end
+
+  def check_for_nine_of_trumps(trump)
+    @hand.include?(Card.new(trump.suit, 9))
   end
 end
 
@@ -244,7 +269,11 @@ class Computer
     @hand.add(card)
   end
 
-  def check_for_pair(move, trump)
+  def check_for_nine_of_trumps(trump)
+    @hand.include?(Card.new(trump.suit, 9))
+  end
+
+  def pair_points(move, trump)
     pairs = {:Q => :K, :K => :Q}
     pair_card = Card.new(move.suit, pairs[move.value])
     if pairs.keys.include?(move.value) and @hand.include?(pair_card)
@@ -254,10 +283,24 @@ class Computer
     end
   end
 
+  def find_pair(trump)
+    queens = @hand.select { |card| card.value == :Q }
+    paired_queens = queens.select { |queen| @hand.include?(Card.new(queen.suit, :K))}
+    if paired_queens.empty?
+      nil
+    else
+      paired_queens.map { |queen| [pair_points(queen, trump), queen] }.max.last
+    end
+  end
+
   def evaluate_hand(trump, state, on_move, player_move = nil)
     if state == :open
       if on_move == 1
-        @hand.min_by{ |card| VALUES[card.value] }
+        if find_pair(trump).nil?
+          @hand.min_by{ |card| VALUES[card.value] * SUITS[card.suit] }# da se oprai
+        else
+          find_pair(trump)
+        end
       else
         possible_take_moves = @hand.select do |card|
           card.suit == player_move.suit and card > player_move
