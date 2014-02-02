@@ -1,5 +1,5 @@
 SUITS = { :spade => 4, :heart => 3 , :diamond => 2 , :club => 1 }
-VALUES = {:A =>11, 10 => 10, :K => 4, :Q => 3, :J => 2, 9 => 0 }
+VALUES = {:A => 11, 10 => 10, :K => 4, :Q => 3, :J => 2, 9 => 0 }
 class Card
   attr_accessor :suit, :value
   include Comparable
@@ -20,12 +20,6 @@ class Card
       SUITS[suit] <=> SUITS[other.suit] 
     end
   end
-
-  # def ==(other)
-  #   suit == other.suit and value == other.value
-  # end
-
-  # alias eql? ==
 end
 
 class Deck
@@ -42,7 +36,6 @@ class Deck
   end
 
   def to_s
-    # unicode_symbols = {:spade => "♠", :heart => "♥", :diamond => "♦", :club => "♣"}
     @deck.sort.reduce("") { |string, card| string << "#{card} " }
   end
 
@@ -64,6 +57,14 @@ class Deck
 
   def empty?
     @deck.empty?
+  end
+
+  def [](key)
+    if key.kind_of?(Integer)
+      @deck[key]
+    else
+      nil
+    end
   end
 end
 
@@ -110,7 +111,7 @@ class Set
   def move(round)
     if @turn.zero?
       puts self
-      if @player.check_for_nine_of_trumps(@trump)
+      if @player.check_for_nine_of_trumps(@trump) and round.between?(2, 5)
         puts "Do you want to exchange 9 of trups? [y, n]\n"
         answer = gets
         if answer.to_s.match(/y/)
@@ -130,7 +131,7 @@ class Set
       end
       puts self
     else
-      if @computer.check_for_nine_of_trumps(@trump)
+      if @computer.check_for_nine_of_trumps(@trump) and round.between?(2, 5)
         exchange_nine_of_trumps(@computer)
       end
       get_computer_move
@@ -149,8 +150,9 @@ class Set
 
   def moves(state)
     1.upto(12) do |round|
-      move(round)
+      @state = :closed if round > 6
       puts "round #{round}"
+      move(round)
       if @computer.points >= 66
         puts "Computer wins\n"
         break
@@ -163,7 +165,7 @@ class Set
           puts "Player wins\n"
         else
           @computer.points += 11
-          puts "Player wins\n"
+          puts "Computer wins\n"
         end
       else
         @player_move = nil
@@ -221,7 +223,7 @@ class Set
     output << "Computer:      #{@computer.hand}".ljust(40) + "#{@computer.points}\n"
     output << "-------------------------------------------------------\n\n"
     output << "[#{state}]".ljust(20) + "#{@computer_move}\n"
-    output << "#{@trump}".ljust(20) + "#{@player_move}\n\n"
+    output << "#{@full_deck[-1]}".ljust(20) + "#{@player_move}\n\n"
     output << "-------------------------------------------------------\n"
     output << "Player:        #{@player.hand}".ljust(40) + "#{@player.points}\n"
     output << " " * 15 +  @player.hand.to_s.split(' ').to_a.map(&:length).zip(0.upto(5).to_a).map do |l, i|
@@ -297,7 +299,7 @@ class Computer
     if state == :open
       if on_move == 1
         if find_pair(trump).nil?
-          @hand.min_by{ |card| VALUES[card.value] * SUITS[card.suit] }# da se oprai
+          @hand.min_by { |card| card.suit == trump.suit ? VALUES[card.value] + 12 : VALUES[card.value] }
         else
           find_pair(trump)
         end
@@ -305,10 +307,10 @@ class Computer
         possible_take_moves = @hand.select do |card|
           card.suit == player_move.suit and card > player_move
         end
-        if possible_take_moves.empty?
-          possible_give_moves = @hand.select do |card|
-            card.suit != trump.suit
-          end.min_by{ |card| VALUES[card.value] }
+        if possible_take_moves.empty? and VALUES[player_move.value] >= 10
+          trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| VALUES[card.value] }
+        elsif possible_take_moves.empty?
+          @hand.min_by { |card| card.suit == trump.suit ? VALUES[card.value] + 12 : VALUES[card.value] }
         else
           possible_take_moves.max
         end
@@ -342,10 +344,10 @@ end
 
 
 # a = Card.new(:spade, 10)
-# # b = Card.new(:club, :A)
+# b = Card.new(:club, :A)
 # c = Card.new(:diamond, :Q)
 
-# # deck = Deck.new([a,b,c])
+# deck = Deck.new([a,b,c])
 # # deck.add(Card.new(:spade, :A))
 # # # deck.map {|x| x.suit = :diamond}
 # # puts deck
@@ -373,3 +375,6 @@ set = Set.new
 set.draw
 set.moves(:open)
 # p Deck.new([]).methods
+
+
+
