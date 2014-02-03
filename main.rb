@@ -115,7 +115,7 @@ class Set
       if @player.check_for_nine_of_trumps(@trump) and round.between?(2, 5)#9 s logic
         puts "Do you want to exchange 9 of trups? [y, n]\n"
         answer = gets
-        if answer.to_s.match(/y/)#unknown why == doesnt work
+        if answer.to_s.downcase.match(/y/)#unknown why == doesnt work
           exchange_nine_of_trumps(@player)
           puts self
         end
@@ -149,7 +149,7 @@ class Set
       get_computer_move
       @computer.points += @computer.pair_points(@computer_move, @trump)
       puts self
-      get_player_move
+      get_player_move_with_validation(@state)
       @computer.possible_player_hand.delete(@player_move)
       score_update
       turn_update
@@ -226,6 +226,25 @@ class Set
     @player_move = @player.hand.remove(sorted_indexes[position.to_i])
   end
 
+  def get_player_move_with_validation(state)#get player move when closed
+    puts "Enter the position [0..5] of the card you want to play: "
+    position = gets.to_i
+    unless (0..5).include?(position.to_i)
+      puts "Invalid position\n"
+      return get_player_move_with_validation(state)
+    end
+    sorted_hand = @player.hand.deck.sort
+    sorted_indexes = {}
+    sorted_hand.each_with_index { |card, i| sorted_indexes[i] = card }
+    if state == :closed or state == :final
+      if !@player.valid_move?(@trump, sorted_indexes[position.to_i], @computer_move)
+        puts "Invalid move\n"
+        return get_player_move_with_validation(state)
+      end
+    end
+    @player_move = @player.hand.remove(sorted_indexes[position.to_i])
+  end
+
   def get_computer_move
     computer_choice = @computer.evaluate_hand(@trump, @state, @turn, @player_move)
     position = @computer.hand.deck.index(computer_choice)
@@ -274,6 +293,21 @@ class Player
 
   def check_for_nine_of_trumps(trump)
     @hand.include?(Card.new(trump.suit, 9))
+  end
+
+  def valid_move?(trump, player_move, computer_move)#for closed state
+    same_suit_moves = @hand.select { |card| card.suit == computer_move.suit }
+    take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[computer_move.value] }
+    if !same_suit_moves.empty?
+      if take_moves.empty?
+        same_suit_moves.include?(player_move)
+      else
+        same_suit_moves.include?(player_move) and VALUES[player_move.value] > VALUES[computer_move.value]
+      end
+    else
+      trump_list = @hand.select { |card| card.suit == trump.suit }
+      trump_list.empty? ? true : trump_list.include?(player_move)
+    end
   end
 end
 
@@ -345,7 +379,7 @@ class Computer
       else
         same_suit_moves = @hand.select { |card| card.suit == player_move.suit }
         if !same_suit_moves.empty?
-          take_moves = same_suit_moves.select { |card| card.value > player_move.value }
+          take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[player_move.value] }
           take_moves.empty? ? same_suit_moves.min : same_suit_moves.max
         else
           if player_move.suit == trump.suit
