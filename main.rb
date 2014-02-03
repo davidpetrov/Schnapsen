@@ -97,6 +97,7 @@ class Set
     @full_deck.add(@trump)
     @player = Player.new(:player, player_cards)
     @computer = Computer.new(computer_cards)
+    # puts @computer.possible_player_hand
   end
 
   def exchange_nine_of_trumps(player)
@@ -108,26 +109,37 @@ class Set
     @trump = nine_of_trumps
   end
 
-  def move(round)
+  def move(round)#refactor
     if @turn.zero?
       puts self
-      if @player.check_for_nine_of_trumps(@trump) and round.between?(2, 5)
+      if @player.check_for_nine_of_trumps(@trump) and round.between?(2, 5)#9 s logic
         puts "Do you want to exchange 9 of trups? [y, n]\n"
         answer = gets
-        if answer.to_s.match(/y/)
+        if answer.to_s.match(/y/)#unknown why == doesnt work
           exchange_nine_of_trumps(@player)
+          puts self
+        end
+      end
+      if @state == :open and round.between?(2, 5)#possible refactor
+        puts "Do you want to close? [y, n]\n"
+        answer = gets
+        if answer.to_s.downcase.match(/y/)
+          @state = :closed
           puts self
         end
       end
       get_player_move
       @player.points += @player.pair_points(@player_move, @trump)
       puts self
+      @computer.possible_player_hand.delete(@player_move)
       get_computer_move
       score_update
       turn_update
       if @state == :open and !@full_deck.empty?
         @player.draw_card(@full_deck.remove())
-        @computer.draw_card(@full_deck.remove())
+        card_drawn = @full_deck.remove()
+        @computer.draw_card(card_drawn)
+        @computer.possible_player_hand.delete(card_drawn)
       end
       puts self
     else
@@ -138,10 +150,13 @@ class Set
       @computer.points += @computer.pair_points(@computer_move, @trump)
       puts self
       get_player_move
+      @computer.possible_player_hand.delete(@player_move)
       score_update
       turn_update
       if @state == :open and !@full_deck.empty?
-        @computer.draw_card(@full_deck.remove())
+        card_drawn = @full_deck.remove()
+        @computer.draw_card(card_drawn)
+        @computer.possible_player_hand.delete(card_drawn)
         @player.draw_card(@full_deck.remove())
       end
       puts self
@@ -150,7 +165,9 @@ class Set
 
   def moves(state)
     1.upto(12) do |round|
-      @state = :closed if round > 6
+      if @state == :open and round > 6
+        @state = :final
+      end 
       puts "round #{round}"
       move(round)
       if @computer.points >= 66
@@ -210,7 +227,7 @@ class Set
   end
 
   def get_computer_move
-    computer_choice = @computer.evaluate_hand(@trump, :open, @turn, @player_move)
+    computer_choice = @computer.evaluate_hand(@trump, @state, @turn, @player_move)
     position = @computer.hand.deck.index(computer_choice)
     sorted_hand = @computer.hand
     sorted_indexes = {}
@@ -261,10 +278,17 @@ class Player
 end
 
 class Computer
-  attr_accessor :hand, :points
+  attr_accessor :hand, :points, :possible_player_hand
   def initialize(hand, points = 0)
     @hand = Deck.new(hand)
     @points = points
+    full_deck = Deck.new([])
+    SUITS.each do |s, _|
+      VALUES.each do |v, _|
+        full_deck.add(Card.new(s,v))
+      end
+    end
+    @possible_player_hand = full_deck.select { |card| !@hand.include?(card) }
   end
 
   def draw_card(card)
@@ -315,11 +339,22 @@ class Computer
           possible_take_moves.max
         end
       end
-    else
+    elsif state == :closed or state == :final
       if on_move == 1
-
+        @hand.max #to do improvements
       else
-
+        same_suit_moves = @hand.select { |card| card.suit == player_move.suit }
+        if !same_suit_moves.empty?
+          take_moves = same_suit_moves.select { |card| card.value > player_move.value }
+          take_moves.empty? ? same_suit_moves.min : same_suit_moves.max
+        else
+          if player_move.suit == trump.suit
+            @hand.min
+          else
+            trump_list = @hand.select { |card| card.suit == trump.suit }
+            trump_list.empty? ? @hand.min : trump_list.max
+          end
+        end
       end
     end
 
@@ -347,7 +382,7 @@ end
 # b = Card.new(:club, :A)
 # c = Card.new(:diamond, :Q)
 
-# deck = Deck.new([a,b,c])
+# deck1 = Deck.new([a,b,c])
 # # deck.add(Card.new(:spade, :A))
 # # # deck.map {|x| x.suit = :diamond}
 # # puts deck
@@ -377,4 +412,4 @@ set.moves(:open)
 # p Deck.new([]).methods
 
 
-
+ # puts deck.select { |card| !deck1.include?(card)}
