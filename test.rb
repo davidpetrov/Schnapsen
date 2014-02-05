@@ -213,10 +213,22 @@ class Minimax
     end
   end
 
-  def generate(turn = 0, player_points, computer_points)
-    root = turn == 0 ? @player_hand.remove() : @computer_hand.remove()
-    hand = turn == 0 ? @computer_hand : @player_hand
-    tree = Tree::TreeNode.new(root.to_s, root)
+  def generate(start_node, player_hand, computer_hand, player_points, computer_points, turn = 0)
+    # puts start_node
+    p_hand = Deck.new(player_hand.deck.map{ |x| x })
+    c_hand = Deck.new(computer_hand.deck.map{ |x| x })
+    # 1 st problem not correct reducing of new hand
+    hand = turn == 0 ? computer_hand : player_hand
+    root = start_node.content.class == Array ? start_node.content.first : start_node.content
+    if player_hand.include?(root)
+      player_hand.remove(root)
+    else
+      computer_hand.remove(root)
+    end
+    if hand.empty?
+      puts "return"
+      return start_node
+    end
     hand.each do |card|
       p_points = player_points
       c_points = computer_points
@@ -228,16 +240,18 @@ class Minimax
         else
           turn == 0 ? c_points += move_value : p_points += move_value
         end
+        turn = outcome == 1 ? 0 : 1
         set_winner = check_for_set_winner(p_points, c_points)
         if set_winner.nil?
-          tree << Tree::TreeNode.new(card.to_s + outcome.to_s + p_points.to_s + c_points.to_s, [card, outcome, p_points, c_points])
+          id = card.to_s + outcome.to_s + p_points.to_s + c_points.to_s
+          start_node << Tree::TreeNode.new(id, [card, outcome, p_points, c_points])
+          # generate(start_node[id], player_hand, computer_hand, p_points, c_points, turn )         
         else
-          tree << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s , [card, outcome, set_winner])
+          puts "dead end #{card}"
+          start_node << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s , [card, outcome, set_winner])
         end
       end
     end
-    tree.print_tree
-    puts tree.is_root?
   end
 end
 
@@ -248,5 +262,10 @@ puts mm.player_hand
 puts mm.computer_hand
 puts mm.player_points
 puts mm.comuter_points
-mm.generate(1, mm.player_points, mm.comuter_points)
-
+c_deck = mm.computer_hand.deck.map { |x| x }
+p_deck = mm.player_hand.deck.map { |x| x }
+computer_hand = Deck.new(c_deck)
+player_hand = Deck.new(p_deck)
+tree = Tree::TreeNode.new(mm.computer_hand[0].to_s, mm.computer_hand[0])
+mm.generate(tree, player_hand, computer_hand, mm.player_points, mm.comuter_points, 1)
+tree.print_tree
