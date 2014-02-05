@@ -68,77 +68,6 @@ class Deck
     end
   end
 end
-# ..... Create the root node first.  Note that every node has a name and an optional content payload.
-# root_node = Tree::TreeNode.new("ROOT", "Root Content")
-# root_node.print_tree
-
-# # ..... Now insert the child nodes.  Note that you can "chain" the child insertions for a given path to any depth.
-# root_node << Tree::TreeNode.new("CHILD1", "Child1 Content") << Tree::TreeNode.new("GRANDCHILD1", "GrandChild1 Content")
-# root_node << Tree::TreeNode.new("CHILD2", "Child2 Content")
-
-# # ..... Lets print the representation to stdout.  This is primarily used for debugging purposes.
-# root_node.print_tree
-
-# # ..... Lets directly access children and grandchildren of the root.  The can be "chained" for a given path to any depth.
-# child1       = root_node["CHILD1"]
-# grand_child1 = root_node["CHILD1"]["GRANDCHILD1"]
-
-# # ..... Now lets retrieve siblings of the current node as an array.
-# siblings_of_child1 = child1.siblings
-
-# # ..... Lets retrieve immediate children of the root node as an array.
-# children_of_root = root_node.children
-
-# # ..... This is a depth-first and L-to-R pre-ordered traversal.
-# root_node.each { |node| node.content.reverse }
-
-# # ..... Lets remove a child node from the root node.
-# root_node.remove!(child1)
-
-# card1 = Card.new(:spade, :J)
-
-# root = Tree::TreeNode.new(card1.to_s, card1)
-# root<< Tree::TreeNode.new(Card.new(:diamond, :J).to_s, Card.new(:diamond, :J) )
-# root<< Tree::TreeNode.new(Card.new(:club, 9).to_s, Card.new(:club, 9) )
-# root[Card.new(:club, 9).to_s] << Tree::TreeNode.new(Card.new(:club, 10).to_s, Card.new(:club, 10) )
-# root[Card.new(:diamond, :J).to_s] << Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A) )
-# root.print_tree
-# root.postordered_each{|x| puts x}
-
-# arr1 = []
-# VALUES.keys.each { |i| arr1 << Card.new(:club, i)  }
-# deck1 = Deck.new(arr1)
-# arr2 = []
-# VALUES.keys.each { |i| arr2 << Card.new(:diamond, i)  }
-# deck2 = Deck.new(arr2)
-
-# puts deck1
-# puts deck2
-
-# TREE = Tree::TreeNode.new(deck1[0].to_s,deck1[0])
-
-
-  # deck1.remove(deck1[0])
-  # deck2.each do |card|
-  #   TREE << Tree::TreeNode.new(card.to_s, card)
-  #   deck1.each do |card1| 
-  #     TREE[card.to_s] << Tree::TreeNode.new(card1.to_s, card1)
-  #   end
-  #  end
-
-  # def generate_tree(root, hand1, hand2)
-#   hand1.remove(root)
-#   puts hand1
-#   hand2.each do |card|
-#     TREE << Tree::TreeNode.new(card.to_s, card)
-#     # generate_tree(card, hand2,hand1)
-#   end
-# end
-
-# generate_tree(deck1[0],deck1,deck2)
-# TREE.print_tree
-# # p TREE.methods.select {|x| x.match(/root/)}
-# puts TREE.root.is_root
 
 class Minimax
   attr_accessor :player_hand, :computer_hand, :trump, :computer_points, :player_points, :turn
@@ -214,20 +143,11 @@ class Minimax
   end
 
   def generate(start_node, player_hand, computer_hand, player_points, computer_points, evaluate, turn = 0)
-    # puts [start_node, player_hand, computer_hand, player_points, comuter_points, evaluate, turn]
     p_hand = Deck.new(player_hand.deck.map{ |x| x })
     c_hand = Deck.new(computer_hand.deck.map{ |x| x })
     hand = turn == 0 ? c_hand : p_hand
     root = start_node.content.class == Array ? start_node.content.first : start_node.content
-    if p_hand.include?(root)
-      p_hand.remove(root)
-    else
-      c_hand.remove(root)
-    end
-    # if hand.empty?
-    #   puts "return"
-    #   return 
-    # end
+    p_hand.include?(root) ? p_hand.remove(root) : c_hand.remove(root)
     if evaluate
       hand.each do |card|
         p_points = player_points
@@ -248,13 +168,12 @@ class Minimax
             start_node << Tree::TreeNode.new(id, [card, outcome, p_points, c_points])
             generate(start_node[id], p_hand, c_hand, p_points, c_points, !evaluate, t)         
           else
-            puts "dead end #{card}"
             start_node << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s + on_move.to_s, [card, outcome, set_winner])
           end
         end
       end
     else
-      hand.each do |card|
+      hand.each do |card| 
         t = turn.zero? ? 1 : 0
         on_move = t == 0 ? :pl :  :co
         start_node << Tree::TreeNode.new(card.to_s + on_move.to_s, [card])
@@ -266,7 +185,7 @@ end
 
 
 mm = Minimax.new
-
+#hardcoded example
 mm.trump = Card.new(:spade, :J)
 mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
   Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
@@ -280,12 +199,8 @@ puts mm.player_hand
 puts mm.computer_hand
 puts mm.player_points
 puts mm.computer_points
-c_deck = mm.computer_hand.deck.map { |x| x }
-p_deck = mm.player_hand.deck.map { |x| x }
-computer_hand = Deck.new(c_deck)
-player_hand = Deck.new(p_deck)
 tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
-mm.generate(tree, player_hand, computer_hand, mm.player_points, mm.computer_points, true, 1)
+mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 1)
 
 tree.print_tree
 puts tree
