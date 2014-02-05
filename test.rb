@@ -141,7 +141,7 @@ end
 # puts TREE.root.is_root
 
 class Minimax
-  attr_accessor :player_hand, :computer_hand, :trump, :comuter_points, :player_points, :turn
+  attr_accessor :player_hand, :computer_hand, :trump, :computer_points, :player_points, :turn
   def initialize
     full_deck = Deck.new([])
     SUITS.each do |s, _|
@@ -213,43 +213,52 @@ class Minimax
     end
   end
 
-  def generate(start_node, player_hand, computer_hand, player_points, computer_points, turn = 0)
-    # puts start_node
+  def generate(start_node, player_hand, computer_hand, player_points, computer_points, evaluate, turn = 0)
+    # puts [start_node, player_hand, computer_hand, player_points, comuter_points, evaluate, turn]
     p_hand = Deck.new(player_hand.deck.map{ |x| x })
     c_hand = Deck.new(computer_hand.deck.map{ |x| x })
-    # 1 st problem not correct reducing of new hand
-    hand = turn == 0 ? computer_hand : player_hand
+    hand = turn == 0 ? c_hand : p_hand
     root = start_node.content.class == Array ? start_node.content.first : start_node.content
-    if player_hand.include?(root)
-      player_hand.remove(root)
+    if p_hand.include?(root)
+      p_hand.remove(root)
     else
-      computer_hand.remove(root)
+      c_hand.remove(root)
     end
-    if hand.empty?
-      puts "return"
-      return start_node
-    end
-    hand.each do |card|
-      p_points = player_points
-      c_points = computer_points
-      if valid_move?(card, root, turn)
-        outcome = evaluate_move_winner(turn, root, card)
-        move_value = VALUES[root.value] + VALUES[card.value]
-        if outcome == 1
-          turn == 0 ? p_points += move_value : c_points += move_value
-        else
-          turn == 0 ? c_points += move_value : p_points += move_value
+    # if hand.empty?
+    #   puts "return"
+    #   return 
+    # end
+    if evaluate
+      hand.each do |card|
+        p_points = player_points
+        c_points = computer_points
+        if valid_move?(card, root, turn)
+          outcome = evaluate_move_winner(turn, root, card)
+          move_value = VALUES[root.value] + VALUES[card.value]
+          if outcome == 1
+            turn == 0 ? p_points += move_value : c_points += move_value
+          else
+            turn == 0 ? c_points += move_value : p_points += move_value
+          end
+          t = outcome == 1 ? 0 : 1
+          set_winner = check_for_set_winner(p_points, c_points)
+          on_move = t == 0 ? :pl :  :co
+          if set_winner.nil?
+            id = card.to_s + outcome.to_s + p_points.to_s + c_points.to_s + on_move.to_s
+            start_node << Tree::TreeNode.new(id, [card, outcome, p_points, c_points])
+            generate(start_node[id], p_hand, c_hand, p_points, c_points, !evaluate, t)         
+          else
+            puts "dead end #{card}"
+            start_node << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s + on_move.to_s, [card, outcome, set_winner])
+          end
         end
-        turn = outcome == 1 ? 0 : 1
-        set_winner = check_for_set_winner(p_points, c_points)
-        if set_winner.nil?
-          id = card.to_s + outcome.to_s + p_points.to_s + c_points.to_s
-          start_node << Tree::TreeNode.new(id, [card, outcome, p_points, c_points])
-          # generate(start_node[id], player_hand, computer_hand, p_points, c_points, turn )         
-        else
-          puts "dead end #{card}"
-          start_node << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s , [card, outcome, set_winner])
-        end
+      end
+    else
+      hand.each do |card|
+        t = turn.zero? ? 1 : 0
+        on_move = t == 0 ? :pl :  :co
+        start_node << Tree::TreeNode.new(card.to_s + on_move.to_s, [card])
+        generate(start_node[card.to_s + on_move.to_s], p_hand, c_hand, player_points, computer_points, !evaluate, t)
       end
     end
   end
@@ -257,15 +266,26 @@ end
 
 
 mm = Minimax.new
+
+mm.trump = Card.new(:spade, :J)
+mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
+  Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
+mm.computer_hand = Deck.new([Card.new(:club, :J), Card.new(:spade, 10), Card.new(:diamond, :Q), 
+  Card.new(:diamond, 9), Card.new(:heart, :A), Card.new(:heart, 10)])
+mm.player_points = 18
+mm.computer_points = 53
+
 puts "trump #{mm.trump}"
 puts mm.player_hand
 puts mm.computer_hand
 puts mm.player_points
-puts mm.comuter_points
+puts mm.computer_points
 c_deck = mm.computer_hand.deck.map { |x| x }
 p_deck = mm.player_hand.deck.map { |x| x }
 computer_hand = Deck.new(c_deck)
 player_hand = Deck.new(p_deck)
-tree = Tree::TreeNode.new(mm.computer_hand[0].to_s, mm.computer_hand[0])
-mm.generate(tree, player_hand, computer_hand, mm.player_points, mm.comuter_points, 1)
+tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
+mm.generate(tree, player_hand, computer_hand, mm.player_points, mm.computer_points, true, 1)
+
 tree.print_tree
+puts tree
