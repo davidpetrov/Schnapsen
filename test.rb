@@ -100,8 +100,8 @@ class Minimax
     @turn = rand(2)# 0 e player 
   end
 
-  def valid_move?(move, played_move, played_by = 0)
-    hand = played_by == 0 ? @computer_hand : @player_hand
+  def valid_move?(move, played_move, played_by = 0,player_hand, computer_hand)
+    hand = played_by == 0 ? computer_hand : player_hand
     same_suit_moves = hand.select { |card| card.suit == played_move.suit }
     take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[played_move.value] }
     if !same_suit_moves.empty?
@@ -153,40 +153,34 @@ class Minimax
   def generate(start_node, player_hand, computer_hand, player_points, computer_points, evaluate, turn)
     p_hand = Deck.new(player_hand.deck.map { |x| x })
     c_hand = Deck.new(computer_hand.deck.map { |x| x })
-    hand = turn == 0 ? c_hand : p_hand
+    hand = turn.zero? ? c_hand : p_hand
     root = start_node.content.class == Array ? start_node.content.first : start_node.content
-    flag = p_hand.include?(root) ? 0 : 1
     p_hand.include?(root) ? p_hand.remove(root) : c_hand.remove(root)
     if evaluate
       hand.each do |card|
         p_points = player_points
         c_points = computer_points
-        if valid_move?(card, root, flag)
-          outcome = flag.zero? ? evaluate_move_winner(turn, root, card) : evaluate_move_winner(turn, card, root)
+        if valid_move?(card, root, turn, p_hand, c_hand)
+          outcome = turn.zero? ? evaluate_move_winner(turn, root, card) : evaluate_move_winner(turn, card, root)
           move_value = VALUES[root.value] + VALUES[card.value]
-          if outcome == 1
-            p_points += move_value
-          else
-            c_points += move_value
-          end
-          t = outcome == 1 ? 1 : 0
+          outcome == 1 ? p_points += move_value : c_points += move_value
+          next_turn = outcome == 1 ? 1 : 0
           set_winner = check_for_set_winner(p_points, c_points)
-          on_move = t == 0 ? :co : :pl
           if set_winner.nil?
-            id = card.to_s + outcome.to_s + p_points.to_s + c_points.to_s + on_move.to_s
+            id = card.to_s + outcome.to_s + p_points.to_s + c_points.to_s
             start_node << Tree::TreeNode.new(id, [card, outcome, p_points, c_points])
-            generate(start_node[id], p_hand, c_hand, p_points, c_points, !evaluate, t)         
+            generate(start_node[id], p_hand, c_hand, p_points, c_points, !evaluate, next_turn)         
           else
-            start_node << Tree::TreeNode.new(card.to_s + outcome.to_s + set_winner.to_s + on_move.to_s, [card, outcome, set_winner])
+            id = card.to_s + outcome.to_s + set_winner.to_s
+            start_node << Tree::TreeNode.new(id, [card, outcome, set_winner])
           end
         end
       end
     else
       hand.each do |card| 
-        t = turn.zero? ? 1 : 0
-        on_move = t == 0 ? :pl :  :co
-        start_node << Tree::TreeNode.new(card.to_s + on_move.to_s, [card])
-        generate(start_node[card.to_s + on_move.to_s], p_hand, c_hand, player_points, computer_points, !evaluate, t)
+        next_turn = turn.zero? ? 1 : 0
+        start_node << Tree::TreeNode.new(card.to_s, [card])
+        generate(start_node[card.to_s], p_hand, c_hand, player_points, computer_points, !evaluate, next_turn)
       end
     end
   end
@@ -209,13 +203,14 @@ puts mm.computer_hand
 puts mm.player_points
 puts mm.computer_points
 tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
+# tree = Tree::TreeNode.new(Card.new(:spade, :A).to_s, Card.new(:spade, :A))
 mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 1)
 
 
 # tree.print_tree
+# puts tree.breadth_each { |x| x.content[2].match(/[computer,player]/) }  
+tree.print_tree
 puts tree
-
-
 #tests
 puts tree.children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:spade, 9)].to_set
 puts tree.children[3].children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:club, :A), Card.new(:club, 10)].to_set
@@ -225,8 +220,8 @@ puts tree.children[3].children[2].children.map{|x| x.content[0]} == [Card.new(:s
 puts tree.children[3].children[3].children.map{|x| x.content[0]} == [Card.new(:club, :J)]
 puts tree.children[3].children[4].children.map{|x| x.content[0]} == [Card.new(:club, :J)]
 puts tree.children[3].children[0].children[0].children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:club, :A), Card.new(:club, 10)].to_set
-puts tree.children[3].children[0].children[0].children[3].children[0].children[1]
+# puts tree.children[3].children[0].children[0].children[3].children[0].children[1].children
+# puts tree.children[3].children[0].children[0].children[2].children[0].children[0].children
 
-#something with evaluate_move_winner is wrong
-#idea hardcoded examples with sets
-
+# puts tree.each_leaf{ |x| puts x.content[2] }
+# puts tree.each_leaf{ |x| puts [:aaaaaaaaa] + [x.content] + x.parentage.map{|x| x.class == Array ? x.content[0] : x.content} + [:bbbbbbbbbbbbbb] if x.content.size!=3}
