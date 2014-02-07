@@ -169,12 +169,17 @@ class Minimax
     p_hand.include?(root) ? p_hand.remove(root) : c_hand.remove(root)
     if root_hand == turn
       pair_points = root_hand.zero? ? pair_points(root, p_hand) : pair_points(root, c_hand)
-      winner = root_hand.zero? ? check_for_winner(player_points + pair_points, computer_points) : check_for_winner(player_points, computer_points+pair_points)
+      if root_hand.zero?
+        winner = check_for_winner(player_points + pair_points, computer_points)
+      else
+        winner = check_for_winner(player_points, computer_points + pair_points)
+      end
     else
       winner = nil
     end
     if !winner.nil?
-      start_node << Tree::TreeNode.new("pair" + winner.to_s, [winner])
+      id = "pair " + "#{pair_points}" + winner.to_s + turn.to_s
+      start_node << Tree::TreeNode.new(id, [winner, turn])
     elsif evaluate
       hand.each do |card|
         new_player_points = player_points
@@ -186,21 +191,23 @@ class Minimax
           outcome == 1 ? new_player_points += move_value : new_computer_points += move_value
           next_turn = outcome == 1 ? 1 : 0
           winner = check_for_winner(new_player_points, new_computer_points)
+          played_by = root_hand.zero? ? 1 : 0 
           if winner.nil?
-            id = card.to_s + outcome.to_s + new_player_points.to_s + new_computer_points.to_s
-            start_node << Tree::TreeNode.new(id, [card, outcome, new_player_points, new_computer_points])
+            id = card.to_s + new_player_points.to_s + new_computer_points.to_s + played_by.to_s
+            start_node << Tree::TreeNode.new(id, [card, new_player_points, new_computer_points, played_by])
             generate(start_node[id], p_hand, c_hand, new_player_points, new_computer_points, !evaluate, next_turn)         
           else
-            id = card.to_s + outcome.to_s + winner.to_s
-            start_node << Tree::TreeNode.new(id, [card, outcome, winner])
+            id = card.to_s + winner.to_s + played_by.to_s
+            start_node << Tree::TreeNode.new(id, [card, winner, played_by])
           end
         end
       end
     else
       hand.each do |card| 
         next_turn = turn.zero? ? 1 : 0
-        start_node << Tree::TreeNode.new(card.to_s, [card])
-        generate(start_node[card.to_s], p_hand, c_hand, player_points, computer_points, !evaluate, next_turn)
+        id = card.to_s + next_turn.to_s
+        start_node << Tree::TreeNode.new(id, [card, next_turn])
+        generate(start_node[id], p_hand, c_hand, player_points, computer_points, !evaluate, next_turn)
       end
     end
   end
@@ -208,7 +215,7 @@ end
 
 
 mm = Minimax.new
-#hardcoded example
+# #hardcoded example
 mm.trump = Card.new(:spade, :J)
 mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
   Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
@@ -232,9 +239,9 @@ puts mm.computer_points
 mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 1)
 
 
-# tree.print_tree
+tree.print_tree
 puts tree
-puts tree.children[2].children[1].children
+# puts tree.children[2].children[1].children
 
 
 
