@@ -100,7 +100,7 @@ class Minimax
     @turn = rand(2)# 0 e player 
   end
 
-  def valid_move?(move, played_move, played_by = 0, player_hand, computer_hand)
+  def valid_move?(move, played_move, played_by, player_hand, computer_hand)
     hand = played_by == 0 ? computer_hand : player_hand
     same_suit_moves = hand.select { |card| card.suit == played_move.suit }
     take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[played_move.value] }
@@ -165,16 +165,17 @@ class Minimax
     c_hand = Deck.new(computer_hand.deck.map { |x| x })
     hand = turn.zero? ? c_hand : p_hand
     root = start_node.content.class == Array ? start_node.content.first : start_node.content
-    pair_points = p_hand.include?(root) ? pair_points(root, p_hand) : pair_points(root, c_hand)
-    winner = p_hand.include?(root) ? check_for_winner(player_points + pair_points, computer_points) : check_for_winner(player_points, computer_points+pair_points)
+    root_hand = p_hand.include?(root) ? 0 : 1
     p_hand.include?(root) ? p_hand.remove(root) : c_hand.remove(root)
-    last_eleven = [p_hand.size, c_hand.size].min == 0 ? 11 : 0
+    pair_points = root_hand.zero? ? pair_points(root, p_hand) : pair_points(root, c_hand)
+    winner = root_hand.zero? ? check_for_winner(player_points + pair_points, computer_points) : check_for_winner(player_points, computer_points+pair_points)
     if !winner.nil?
       start_node << Tree::TreeNode.new("pair" + winner.to_s, [winner])
     elsif evaluate
       hand.each do |card|
         new_player_points = player_points
         new_computer_points = computer_points
+        last_eleven = hand.size == 1 ? 11 : 0
         if valid_move?(card, root, turn, p_hand, c_hand)
           outcome = turn.zero? ? evaluate_move_winner(turn, root, card) : evaluate_move_winner(turn, card, root)
           move_value = VALUES[root.value] + VALUES[card.value] + last_eleven
@@ -212,30 +213,26 @@ mm.computer_hand = Deck.new([Card.new(:club, :J), Card.new(:spade, 10), Card.new
 mm.player_points = 18
 mm.computer_points = 53
 
+# mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :Q)])
+# mm.computer_hand = Deck.new([Card.new(:spade, :K), Card.new(:spade, 10)])
+# mm.player_points = 50
+# mm.computer_points = 50
+
 puts "trump #{mm.trump}"
 puts mm.player_hand
 puts mm.computer_hand
 puts mm.player_points
 puts mm.computer_points
-tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
-# tree = Tree::TreeNode.new(Card.new(:spade, :A).to_s, Card.new(:spade, :A))
+ tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
+# tree = Tree::TreeNode.new(Card.new(:spade, :Q).to_s, Card.new(:spade, :Q))
 mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 1)
 
 
 # tree.print_tree
-# puts tree.breadth_each { |x| x.content[2].match(/[computer,player]/) }  
-# tree.print_tree
 puts tree
-puts tree.children[0].children[2].children[0].children[2].children[1].children
-# #tests
-# puts tree.children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:spade, 9)].to_set
-# puts tree.children[3].children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:club, :A), Card.new(:club, 10)].to_set
-# puts tree.children[3].children[0].children.map{|x| x.content[0]} == [Card.new(:spade, 10)]
-# puts tree.children[3].children[1].children.map{|x| x.content[0]} == [Card.new(:spade, 10)]
-# puts tree.children[3].children[2].children.map{|x| x.content[0]} == [Card.new(:spade, 10)]
-# puts tree.children[3].children[3].children.map{|x| x.content[0]} == [Card.new(:club, :J)]
-# puts tree.children[3].children[4].children.map{|x| x.content[0]} == [Card.new(:club, :J)]
-# puts tree.children[3].children[0].children[0].children.map{|x| x.content[0]}.to_set == [Card.new(:spade, :K), Card.new(:spade, :Q), Card.new(:club, :A), Card.new(:club, 10)].to_set
+puts tree.children[2].children
 
 
-# puts tree.each_leaf{ |x| puts x.content[2] }
+
+
+# puts tree.each_leaf{ |x| puts x.content }
