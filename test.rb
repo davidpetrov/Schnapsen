@@ -167,8 +167,12 @@ class Minimax
     root = start_node.content.class == Array ? start_node.content.first : start_node.content
     root_hand = p_hand.include?(root) ? 0 : 1
     p_hand.include?(root) ? p_hand.remove(root) : c_hand.remove(root)
-    pair_points = root_hand.zero? ? pair_points(root, p_hand) : pair_points(root, c_hand)
-    winner = root_hand.zero? ? check_for_winner(player_points + pair_points, computer_points) : check_for_winner(player_points, computer_points+pair_points)
+    if root_hand == turn
+      pair_points = root_hand.zero? ? pair_points(root, p_hand) : pair_points(root, c_hand)
+      winner = root_hand.zero? ? check_for_winner(player_points + pair_points, computer_points) : check_for_winner(player_points, computer_points+pair_points)
+    else
+      winner = nil
+    end
     if !winner.nil?
       start_node << Tree::TreeNode.new("pair" + winner.to_s, [winner])
     elsif evaluate
@@ -230,9 +234,8 @@ mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.compute
 
 # tree.print_tree
 puts tree
-puts tree.children[2].children
+puts tree.children[2].children[1].children
 
 
 
-
-# puts tree.each_leaf{ |x| puts x.content }
+# puts tree.each_leaf{ |x| puts ["aaaaaaaaaaa"] +[x.content] + x.parentage.map{|x| x.content} + ["bbbbbbbbbb"] if x.content.size >1 and x.content[2][0] == :computer}
