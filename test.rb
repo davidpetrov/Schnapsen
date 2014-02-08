@@ -12,7 +12,7 @@ class Card
 
   def to_s
     unicode_symbols = {:spade => "♠", :heart => "♥", :diamond => "♦", :club => "♣"}
-    "#{value}#{unicode_symbols[suit]}"
+    "#{@value}#{unicode_symbols[@suit]}"
   end
 
   alias eql? ==
@@ -20,7 +20,6 @@ class Card
   def hash
     [@suit,  @value].hash
   end
-
 
   def <=>(other)
     if suit == other.suit
@@ -179,7 +178,7 @@ class Minimax
     end
     if !winner.nil?
       id = "pair " + "#{pair_points}" + winner.to_s + turn.to_s
-      start_node << Tree::TreeNode.new(id, [winner, turn])
+      start_node << Tree::TreeNode.new(id, [pair_points, winner, turn])
     elsif evaluate
       hand.each do |card|
         new_player_points = player_points
@@ -206,43 +205,111 @@ class Minimax
       hand.each do |card| 
         next_turn = turn.zero? ? 1 : 0
         id = card.to_s + next_turn.to_s
-        start_node << Tree::TreeNode.new(id, [card, next_turn])
+        start_node << Tree::TreeNode.new(id, [card, player_points, computer_points, next_turn])
         generate(start_node[id], p_hand, c_hand, player_points, computer_points, !evaluate, next_turn)
       end
+    end
+  end
+
+  def compare_scores(content, other)
+    content <=> other
+  end
+
+  def compare_end_states(state, other)
+    order = [[:player, 3], [:player, 2], [:player, 1], [:computer, 1], [:computer, 2], [:computer, 3]]
+    order.index(state) <=> order.index(other)
+  end
+
+  def compare_score_and_state(score, state)
+    state.first == :player ? 1 : -1
+  end
+
+  def compare_nodes(node, other)
+    if node.length == 3 and other.length == 3
+      compare_end_states(node[1], other[1])
+    elsif node.length == 4 and other.length == 4
+      compare_scores(node[2], other[2])
+    elsif node.length == 4 and other.length ==3
+      compare_score_and_state(node[2], other[1])
+    else
+      compare_score_and_state(other[1], node[2]) * (-1)
+    end
+  end
+
+  def minimax(node)
+    if node.children.empty?
+      return node
+    end
+    if node.content.last == 1 or node.content.class == Card
+      best_value = Tree::TreeNode.new("min", [nil, [:player, 3], nil])
+      node.children.each do |child|
+        value = minimax(child) 
+        # puts value.content
+        # puts best_value.content
+        best_value = compare_nodes(value.content, best_value.content) == 1 ? value : best_value
+        # puts "max #{best_value}"
+      end
+      return  best_value
+    else
+      best_value = Tree::TreeNode.new("max", [nil, [:computer, 3], nil])
+      node.children.each do |child|
+        value = minimax(child)
+        # puts value.content
+        # puts best_value.content
+        best_value = compare_nodes(value.content, best_value.content) == -1 ? value : best_value
+        # puts "min #{best_value.content}"
+      end
+      return best_value
     end
   end
 end
 
 
 mm = Minimax.new
-# #hardcoded example
-mm.trump = Card.new(:spade, :J)
-mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
-  Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
-mm.computer_hand = Deck.new([Card.new(:club, :J), Card.new(:spade, 10), Card.new(:diamond, :Q), 
-  Card.new(:diamond, 9), Card.new(:heart, :A), Card.new(:heart, 10)])
-mm.player_points = 18
-mm.computer_points = 53
+#hardcoded example
+# mm.trump = Card.new(:spade, :J)
+# mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
+#   Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
+# mm.computer_hand = Deck.new([Card.new(:club, :J), Card.new(:spade, 10), Card.new(:diamond, :Q), 
+#   Card.new(:diamond, 9), Card.new(:heart, :A), Card.new(:heart, 10)])
+# mm.player_points = 18
+# mm.computer_points = 53
 
 # mm.player_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :Q)])
 # mm.computer_hand = Deck.new([Card.new(:spade, :K), Card.new(:spade, 10)])
 # mm.player_points = 50
 # mm.computer_points = 50
 
+mm.trump = Card.new(:spade, :J)
+mm.computer_hand = Deck.new([Card.new(:spade, :A), Card.new(:spade, :K), Card.new(:spade, :Q), 
+  Card.new(:spade, 9), Card.new(:club, :A), Card.new(:club, 10)])
+mm.player_hand = Deck.new([Card.new(:club, :J), Card.new(:spade, 10), Card.new(:diamond, :Q), 
+  Card.new(:diamond, 9), Card.new(:heart, :A), Card.new(:heart, 10)])
+mm.player_points = 53
+mm.computer_points = 18
+
+
+
 puts "trump #{mm.trump}"
 puts mm.player_hand
 puts mm.computer_hand
 puts mm.player_points
 puts mm.computer_points
- tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
-# tree = Tree::TreeNode.new(Card.new(:spade, :Q).to_s, Card.new(:spade, :Q))
-mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 1)
+ # tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, Card.new(:heart, :A))
+# tree = Tree::TreeNode.new(Card.new(:spade, :A).to_s, [Card.new(:spade, :A),1])
+tree = Tree::TreeNode.new(Card.new(:heart, :A).to_s, [Card.new(:heart, :A), 1])
+mm.generate(tree, mm.player_hand, mm.computer_hand, mm.player_points, mm.computer_points, true, 0)
 
-
-tree.print_tree
 puts tree
+# tree.print_tree
+# puts tree.children[0].content
+# puts tree.children[1].content
+# puts tree.children.each{|x| puts x.content }
+# puts mm.minimax(tree)
+puts mm.minimax(tree).parentage
+# puts tree.children[1]
 # puts tree.children[2].children[1].children
-
-
+# puts mm.compare_nodes(tree.children[0].content,tree.children[1].content)
 
 # puts tree.each_leaf{ |x| puts ["aaaaaaaaaaa"] +[x.content] + x.parentage.map{|x| x.content} + ["bbbbbbbbbb"] if x.content.size >1 and x.content[2][0] == :computer}
+# tree.breadth_each {|x| p x.content}
