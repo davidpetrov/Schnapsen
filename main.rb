@@ -1,8 +1,7 @@
-SUITS = { :spade => 4, :heart => 3 , :diamond => 2 , :club => 1 }
-VALUES = {:A => 11, 10 => 10, :K => 4, :Q => 3, :J => 2, 9 => 0 }
+require_relative 'constants.rb'
 class Card
-  attr_accessor :suit, :value
   include Comparable
+  attr_accessor :suit, :value
   def initialize(suit, value)
     @suit = suit
     @value = value
@@ -10,14 +9,20 @@ class Card
 
   def to_s
     unicode_symbols = {:spade => "♠", :heart => "♥", :diamond => "♦", :club => "♣"}
-    "#{value}#{unicode_symbols[suit]}"
+    "#{@value}#{unicode_symbols[@suit]}"
+  end
+
+  alias eql? ==
+
+  def hash
+    [@suit,  @value].hash
   end
 
   def <=>(other)
     if suit == other.suit
-      VALUES[value] <=> VALUES[other.value]
+      Constants::VALUES[value] <=> Constants::VALUES[other.value]
     else
-      SUITS[suit] <=> SUITS[other.suit] 
+      Constants::SUITS[suit] <=> Constants::SUITS[other.suit] 
     end
   end
 end
@@ -72,8 +77,8 @@ class Set
   attr_accessor :state
   def initialize()
     @full_deck = Deck.new([])
-    SUITS.each do |s, _|
-      VALUES.each do |v, _|
+    Constants::SUITS.each do |s, _|
+      Constants::VALUES.each do |v, _|
         @full_deck.add(Card.new(s,v))
       end
     end
@@ -81,9 +86,9 @@ class Set
     @turn = rand(2)
   end
 
-  def trump_set(suit)
-    SUITS.each { |s, v| SUITS[s] = s == suit ? 4 : v - 1 }
-  end
+  # def trump_set(suit)
+  #   SUITS.each { |s, v| SUITS[s] = s == suit ? 4 : v - 1 }
+  # end
 
   def draw
     @full_deck.shuffle
@@ -93,7 +98,7 @@ class Set
       3.times { computer_cards << @full_deck.remove() }
     end
     @trump = @full_deck.remove()
-    trump_set(@trump.suit)
+    Constants.trump_set(@trump.suit)
     @full_deck.add(@trump)
     @player = Player.new(:player, player_cards)
     @computer = Computer.new(computer_cards)
@@ -107,6 +112,18 @@ class Set
     player.hand.remove(nine_of_trumps)
     @full_deck.add(nine_of_trumps)
     @trump = nine_of_trumps
+  end
+
+  def score_calculate
+    winner = check_for_set_winner
+    loser = winner == :player ? @computer : @player
+    if loser.points == 0
+      [3, winner]
+    elsif loser.points < 33
+      [2, winner]
+    else
+      [1, winner]
+    end
   end
 
   def move(round)#refactor
@@ -131,9 +148,11 @@ class Set
       get_player_move
       @player.points += @player.pair_points(@player_move, @trump)
       puts self
+      return score_calculate if !check_for_set_winner.nil?
       @computer.possible_player_hand.delete(@player_move)
       get_computer_move
-      score_update
+      points_update
+      return score_calculate if !check_for_set_winner.nil?
       turn_update
       if @state == :open and !@full_deck.empty?
         @player.draw_card(@full_deck.remove())
@@ -149,9 +168,11 @@ class Set
       get_computer_move
       @computer.points += @computer.pair_points(@computer_move, @trump)
       puts self
+      return score_calculate if !check_for_set_winner.nil?
       get_player_move_with_validation(@state)
       @computer.possible_player_hand.delete(@player_move)
-      score_update
+      points_update
+      return score_calculate if !check_for_set_winner.nil?
       turn_update
       if @state == :open and !@full_deck.empty?
         card_drawn = @full_deck.remove()
@@ -169,30 +190,34 @@ class Set
         @state = :final
       end 
       puts "round #{round}"
-      move(round)
-      if @computer.points >= 66
-        puts "Computer wins\n"
+      result = move(round)
+      if !result.nil?
+        puts result
         break
-      elsif @player.points >= 66
-        puts "Player wins\n"
-        break
-      elsif round == 12
-        if evaluate_move_winner(@turn) == 1
-          @player.points += 11
-          puts "Player wins\n"
-        else
-          @computer.points += 11
-          puts "Computer wins\n"
-        end
-      else
+      end
+      # if @computer.points >= 66
+      #   puts "Computer wins\n"
+      #   break
+      # elsif @player.points >= 66
+      #   puts "Player wins\n"
+      #   break
+      # elsif round == 12
+      #   if evaluate_move_winner(@turn) == 1
+      #     @player.points += 11
+      #     puts "Player wins\n"
+      #   else
+      #     @computer.points += 11
+      #     puts "Computer wins\n"
+      #   end
+      # else
         @player_move = nil
         @computer_move = nil
-      end
+      # end
     end
   end
 
 
-  def evaluate_move_winner(turn)#1 if player win 0 else
+  def evaluate_move_winner(turn)#1 if player win -1 else
     if @computer_move.suit == @player_move.suit
       @player_move <=> @computer_move
     else
@@ -204,8 +229,18 @@ class Set
     end    
   end
 
-  def score_update
-    move_value = VALUES[@player_move.value] + VALUES[@computer_move.value]
+  def check_for_set_winner
+    if @player.points >= 66
+      :player
+    elsif @computer.points >= 66
+      :computer
+    else
+      nil
+    end
+  end
+
+  def points_update
+    move_value = Constants::VALUES[@player_move.value] + Constants::VALUES[@computer_move.value]
     evaluate_move_winner(@turn) > 0 ? @player.points += move_value : @computer.points += move_value
   end
 
@@ -297,12 +332,12 @@ class Player
 
   def valid_move?(trump, player_move, computer_move)#for closed state
     same_suit_moves = @hand.select { |card| card.suit == computer_move.suit }
-    take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[computer_move.value] }
+    take_moves = same_suit_moves.select { |card| Constants::VALUES[card.value] > Constants::VALUES[computer_move.value] }
     if !same_suit_moves.empty?
       if take_moves.empty?
         same_suit_moves.include?(player_move)
       else
-        same_suit_moves.include?(player_move) and VALUES[player_move.value] > VALUES[computer_move.value]
+        same_suit_moves.include?(player_move) and Constants::VALUES[player_move.value] > Constants::VALUES[computer_move.value]
       end
     else
       trump_list = @hand.select { |card| card.suit == trump.suit }
@@ -317,8 +352,8 @@ class Computer
     @hand = Deck.new(hand)
     @points = points
     full_deck = Deck.new([])
-    SUITS.each do |s, _|
-      VALUES.each do |v, _|
+    Constants::SUITS.each do |s, _|
+      Constants::VALUES.each do |v, _|
         full_deck.add(Card.new(s,v))
       end
     end
@@ -357,7 +392,7 @@ class Computer
     if state == :open
       if on_move == 1
         if find_pair(trump).nil?
-          @hand.min_by { |card| card.suit == trump.suit ? VALUES[card.value] + 12 : VALUES[card.value] }
+          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
         else
           find_pair(trump)
         end
@@ -365,10 +400,10 @@ class Computer
         possible_take_moves = @hand.select do |card|
           card.suit == player_move.suit and card > player_move
         end
-        if possible_take_moves.empty? and VALUES[player_move.value] >= 10
-          trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| VALUES[card.value] }
+        if possible_take_moves.empty? and Constants::VALUES[player_move.value] >= 10
+          trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| Constants::VALUES[card.value] }
         elsif possible_take_moves.empty?
-          @hand.min_by { |card| card.suit == trump.suit ? VALUES[card.value] + 12 : VALUES[card.value] }
+          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
         else
           possible_take_moves.max
         end
@@ -379,7 +414,7 @@ class Computer
       else
         same_suit_moves = @hand.select { |card| card.suit == player_move.suit }
         if !same_suit_moves.empty?
-          take_moves = same_suit_moves.select { |card| VALUES[card.value] > VALUES[player_move.value] }
+          take_moves = same_suit_moves.select { |card| Constants::VALUES[card.value] > Constants::VALUES[player_move.value] }
           take_moves.empty? ? same_suit_moves.min : same_suit_moves.max
         else
           if player_move.suit == trump.suit
@@ -391,9 +426,10 @@ class Computer
         end
       end
     end
-
   end
 end
+
+
 
 # class Board
 #   def initialize(trump, state, on_move, computer_hand, player_hand, computer_move, player_move, computer_points, player_points)
