@@ -44,4 +44,22 @@ class Deck
       nil
     end
   end
+
+  def []=(key, value)
+    if key.kind_of?(Integer)
+      @deck[key] = value
+    else
+      nil
+    end
+  end
+
+  def self.full_deck
+    full_deck = Deck.new([])
+    Constants::SUITS.each do |s, _|
+      Constants::VALUES.each do |v, _|
+        full_deck.add(Card.new(s,v))
+      end
+    end
+    full_deck
+  end
 end
