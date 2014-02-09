@@ -1,29 +1,31 @@
 require_relative 'constants.rb'
-class Card
-  include Comparable
-  attr_accessor :suit, :value
-  
-  def initialize(suit, value)
-    @suit = suit
-    @value = value
-  end
+module Schnapsen
+  class Card
+    include Comparable
+    attr_accessor :suit, :value
 
-  def to_s
-    unicode_symbols = {:spade => "♠", :heart => "♥", :diamond => "♦", :club => "♣"}
-    "#{@value}#{unicode_symbols[@suit]}"
-  end
+    def initialize(suit, value)
+      @suit = suit
+      @value = value
+    end
 
-  alias eql? ==
+    def to_s
+      unicode_symbols = {:spade => "♠", :heart => "♥", :diamond => "♦", :club => "♣"}
+      "#{@value}#{unicode_symbols[@suit]}"
+    end
 
-  def hash
-    [@suit,  @value].hash
-  end
+    alias eql? ==
 
-  def <=>(other)
-    if suit == other.suit
-      Constants::VALUES[value] <=> Constants::VALUES[other.value]
-    else
-      Constants::SUITS[suit] <=> Constants::SUITS[other.suit] 
+    def hash
+      [@suit, @value].hash
+    end
+
+    def <=>(other)
+      if suit == other.suit
+        Constants::VALUES[value] <=> Constants::VALUES[other.value]
+      else
+        Constants::SUITS[suit] <=> Constants::SUITS[other.suit] 
+      end
     end
   end
 end
