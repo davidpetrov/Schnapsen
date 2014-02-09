@@ -7,12 +7,7 @@ class Computer
   def initialize(hand, points = 0)
     @hand = Deck.new(hand)
     @points = points
-    full_deck = Deck.new([])
-    Constants::SUITS.each do |s, _|
-      Constants::VALUES.each do |v, _|
-        full_deck.add(Card.new(s,v))
-      end
-    end
+    full_deck = Deck.full_deck   
     @possible_player_hand = full_deck.select { |card| !@hand.include?(card) }
   end
 
