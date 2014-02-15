@@ -39,19 +39,11 @@ module Schnapsen
     end
 
     def [](key)
-      if key.kind_of?(Integer)
-        @deck[key]
-      else
-        nil
-      end
+      @deck[key]
     end
 
     def []=(key, value)
-      if key.kind_of?(Integer)
-        @deck[key] = value
-      else
-        nil
-      end
+      @deck[key] = value 
     end
 
     def self.full_deck
