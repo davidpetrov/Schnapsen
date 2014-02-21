@@ -3,11 +3,11 @@ require_relative 'card.rb'
 module Schnapsen
   class Deck
     include Enumerable
-    attr_accessor :size, :deck
+    attr_reader :size, :deck
     
     def initialize(cards)
-      @size = cards.size
       @deck = cards
+      @size = @deck.size
     end
 
     def each(&block)
