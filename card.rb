@@ -2,7 +2,7 @@ require_relative 'constants.rb'
 module Schnapsen
   class Card
     include Comparable
-    attr_accessor :suit, :value
+    attr_reader :suit, :value
 
     def initialize(suit, value)
       @suit = suit

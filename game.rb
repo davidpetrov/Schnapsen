@@ -5,7 +5,7 @@ require_relative 'player.rb'
 require_relative 'computer.rb'
 require_relative 'board.rb'
 require_relative 'userinterface.rb'
-require_relative 'main.rb'
+require_relative 'gameset.rb'
 module Schnapsen
   class Game
     def initialize
@@ -44,6 +44,6 @@ module Schnapsen
     end
   end
 
-  game = Game.new
-  game.play
+  # game = Game.new
+  # game.play
 end

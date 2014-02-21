@@ -1,6 +1,6 @@
-  require_relative 'constants.rb'
-  require_relative 'card.rb'
-  require_relative 'deck.rb'
+require_relative 'constants.rb'
+require_relative 'card.rb'
+require_relative 'deck.rb'
 module Schnapsen
   class Computer
     attr_accessor :hand, :points, :possible_player_hand

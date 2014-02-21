@@ -4,7 +4,7 @@ module Schnapsen
       @board = board
     end
 
-    def display_board(player_points, computer_points,player_hand, computer_hand)
+    def display_board(player_points, computer_points, player_hand, computer_hand)
       output = ""
       output << "Computer:      #{computer_hand}".ljust(40) + "#{computer_points}\n"
       output << "-------------------------------------------------------\n\n"
