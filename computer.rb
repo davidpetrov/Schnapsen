@@ -48,25 +48,35 @@ module Schnapsen
         evaluate_when_closed(trump, on_move, player_move)
       end
     end
+
+    private
   
     def evaluate_when_open(trump, on_move, player_move = nil)
        if on_move == 1
-        if find_pair(trump).nil?
-          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
-        else
-          find_pair(trump)
-        end
+        evaluate_when_open_and_onmove(trump, player_move)
       else
-        possible_take_moves = @hand.select do |card|
-          card.suit == player_move.suit and card > player_move
-        end
-        if possible_take_moves.empty? and Constants::VALUES[player_move.value] >= 10
-          trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| Constants::VALUES[card.value] }
-        elsif possible_take_moves.empty?
-          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
-        else
-          possible_take_moves.max
-        end
+        evaluate_when_open_and_not_onmove(trump, player_move)
+      end
+    end
+
+    def evaluate_when_open_and_onmove(trump, player_move = nil)
+      if find_pair(trump).nil?
+        @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
+      else
+        find_pair(trump)
+      end
+    end
+
+    def evaluate_when_open_and_not_onmove(trump, player_move = nil)
+      possible_take_moves = @hand.select do |card|
+        card.suit == player_move.suit and card > player_move
+      end
+      if possible_take_moves.empty? and Constants::VALUES[player_move.value] >= 10
+        trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| Constants::VALUES[card.value] }
+      elsif possible_take_moves.empty?
+        @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
+      else
+        possible_take_moves.max
       end
     end
 
@@ -88,6 +98,5 @@ module Schnapsen
         end
       end
     end
-
   end
 end
