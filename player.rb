@@ -3,7 +3,8 @@ require_relative 'card.rb'
 require_relative 'deck.rb'
 module Schnapsen
   class Player
-    attr_accessor :hand, :points
+    attr_accessor :points
+    attr_reader :hand, :name
 
     def initialize(name, hand, points = 0)
       @name = name
