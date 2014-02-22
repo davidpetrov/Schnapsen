@@ -136,8 +136,6 @@ module Schnapsen
         puts "round #{round}"
         result = move(round)
         if !result.nil?
-          # puts result
-          # break
           return result
         end
         @board.player_move = nil
