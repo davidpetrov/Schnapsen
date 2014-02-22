@@ -3,7 +3,8 @@ require_relative 'card.rb'
 require_relative 'deck.rb'
 module Schnapsen
   class Computer
-    attr_accessor :hand, :points, :possible_player_hand
+    attr_accessor :points, :possible_player_hand
+    attr_reader :hand
 
     def initialize(hand, points = 0)
       @hand = Deck.new(hand)
@@ -42,42 +43,51 @@ module Schnapsen
 
     def evaluate_hand(trump, state, on_move, player_move = nil)
       if state == :open
-        if on_move == 1
-          if find_pair(trump).nil?
-            @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
-          else
-            find_pair(trump)
-          end
-        else
-          possible_take_moves = @hand.select do |card|
-            card.suit == player_move.suit and card > player_move
-          end
-          if possible_take_moves.empty? and Constants::VALUES[player_move.value] >= 10
-            trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| Constants::VALUES[card.value] }
-          elsif possible_take_moves.empty?
-            @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
-          else
-            possible_take_moves.max
-          end
-        end
+        evaluate_when_open(trump, on_move, player_move)
       elsif state == :closed or state == :final
-        if on_move == 1
-          @hand.max #to do improvements
+        evaluate_when_closed(trump, on_move, player_move)
+      end
+    end
+  
+    def evaluate_when_open(trump, on_move, player_move = nil)
+       if on_move == 1
+        if find_pair(trump).nil?
+          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
         else
-          same_suit_moves = @hand.select { |card| card.suit == player_move.suit }
-          if !same_suit_moves.empty?
-            take_moves = same_suit_moves.select { |card| Constants::VALUES[card.value] > Constants::VALUES[player_move.value] }
-            take_moves.empty? ? same_suit_moves.min : same_suit_moves.max
+          find_pair(trump)
+        end
+      else
+        possible_take_moves = @hand.select do |card|
+          card.suit == player_move.suit and card > player_move
+        end
+        if possible_take_moves.empty? and Constants::VALUES[player_move.value] >= 10
+          trump_list = @hand.select { |card| card.suit == trump.suit }.min_by { |card| Constants::VALUES[card.value] }
+        elsif possible_take_moves.empty?
+          @hand.min_by { |card| card.suit == trump.suit ? Constants::VALUES[card.value] + 12 : Constants::VALUES[card.value] }
+        else
+          possible_take_moves.max
+        end
+      end
+    end
+
+    def evaluate_when_closed(trump, on_move, player_move = nil)
+      if on_move == 1
+        @hand.max
+      else
+        same_suit_moves = @hand.select { |card| card.suit == player_move.suit }
+        if !same_suit_moves.empty?
+          take_moves = same_suit_moves.select { |card| Constants::VALUES[card.value] > Constants::VALUES[player_move.value] }
+          take_moves.empty? ? same_suit_moves.min : same_suit_moves.max
+        else
+          if player_move.suit == trump.suit
+            @hand.min
           else
-            if player_move.suit == trump.suit
-              @hand.min
-            else
-              trump_list = @hand.select { |card| card.suit == trump.suit }
-              trump_list.empty? ? @hand.min : trump_list.max
-            end
+            trump_list = @hand.select { |card| card.suit == trump.suit }
+            trump_list.empty? ? @hand.min : trump_list.max
           end
         end
       end
     end
+
   end
 end
